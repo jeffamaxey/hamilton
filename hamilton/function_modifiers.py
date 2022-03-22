@@ -8,11 +8,13 @@ import pandas as pd
 import typing_inspect
 
 from hamilton import node
-from hamilton.function_modifiers_base import NodeCreator, NodeResolver, NodeExpander, sanitize_function_name, NodeDecorator
+from hamilton.data_quality import default_validators
+from hamilton.data_quality.base import DataValidator
+from hamilton.data_quality.default_validators import DefaultValidator
+from hamilton.function_modifiers_base import NodeCreator, NodeResolver, NodeExpander, sanitize_function_name, NodeDecorator, NodeTransformer
 from hamilton.models import BaseModel
 
 logger = logging.getLogger(__file__)
-
 
 """
 Annotations for modifying the way functions get added to the DAG.
@@ -593,3 +595,57 @@ class tag(NodeDecorator):
                                             'Paths components also cannot be empty. '
                                             'The value can be anything. Note that the following top-level prefixes are '
                                             f'reserved as well: {self.RESERVED_TAG_NAMESPACES}')
+
+
+class check_output(NodeTransformer):
+    def __init__(self, validator: Type[DataValidator] = None, importance: str = DataValidator.WARN, **validator_kwargs):
+        """Creates the check_output validator. This constructs the specified validator class.
+
+        :param validator: Validator class to construct
+        :param importance: Importance level of this check
+        :param validator_kwargs: keyword arguments to be passed to the validator
+        """
+        if validator is not None:
+            if not issubclass(validator):
+                raise ValueError(f'Validator must be a subclass of DataValidator. Instead got: {validator}')
+            self.validators = [validator]
+        else:
+            self.validators = DefaultValidator.res
+        DataValidator.validate_importance_level(importance)
+        self.importance = importance
+        self.validator = validator(**validator_kwargs)
+
+    def transform_node(self, node_: node.Node, config: Dict[str, Any], fn: Callable) -> Collection[node.Node]:
+        """Transforms the node into a set of nodes that do data quality checks.
+        Say the node beforehand is FOO. For each dq check i, this creates the following nodes + edges
+        _FOO_raw -> _FOO_with_dq_i -> FOO # dependency (optional) to enable failing of the DAG when FOO is executed
+        _FOO_raw -> FOO # gives the actual results to pass through
+        _FOO_with_dq_i -> FOO_dq_i # dq node for later access
+        Thus it creates a fanning out of the DAG and a collection back for foo.
+        It does this so the DAG can fail if a node fails.
+        Note the following:
+        1. The structure is *not* part of the interface -- rather, the only defined component of the interface is utilizing tags
+        to tag nodes that are DQ results
+        2. The DQ results are tagged as *final*, meaning that they won't get transformed again through another decorator
+        TODO -- enable disabling of DQ checks using the config.
+
+        :param node_: Node to transform
+        :param config:
+        :param fn:
+        :return:
+        """
+        pass
+
+    def get_validators(self) -> typing.List[DataValidator]:
+        pass
+
+    def validate(self, fn: Callable):
+        """Validates that the check_output node works on the function on which it was called
+
+        :param fn: Function to validate
+        :raises: InvalidDecoratorException if the decorator is not valid for the function's return type
+        """
+        sig = inspect.signature(fn)
+        return_annotation = sig.return_annotation
+        if not self.validator.applies_to(return_annotation):
+            raise InvalidDecoratorException(f'Validator {self} cannot work on node output: {return_annotation}')
