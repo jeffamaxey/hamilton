@@ -58,8 +58,11 @@ class SparkKoalasGraphAdapter(base.HamiltonGraphAdapter, base.ResultMixin):
         :param spine_column: the column we should use first as the spine and then subsequently join against.
         """
         self.spark_session = spark_session
-        if not (isinstance(result_builder, base.PandasDataFrameResult) or
-                isinstance(result_builder, KoalasDataFrameResult)):
+        if not (
+            isinstance(
+                result_builder, (base.PandasDataFrameResult, KoalasDataFrameResult)
+            )
+        ):
             raise ValueError('SparkKoalasGraphAdapter only supports returning:'
                              ' a "pandas" DF at the moment, or a "koalas" DF at the moment.')
         self.result_builder = result_builder
@@ -76,8 +79,9 @@ class SparkKoalasGraphAdapter(base.HamiltonGraphAdapter, base.ResultMixin):
         :return: whether this is okay, or not.
         """
         # TODO: flesh this out more
-        if (node_type == pd.Series or node_type == ps.Series) and (
-                isinstance(input_value, ps.DataFrame) or isinstance(input_value, ps.Series)):
+        if node_type in [pd.Series, ps.Series] and (
+            isinstance(input_value, (ps.DataFrame, ps.Series))
+        ):
             return True
         elif node_type == np.array and isinstance(input_value, dataframe.DataFrame):
             return True

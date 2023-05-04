@@ -68,10 +68,7 @@ class NumpyMatrixResult(ResultMixin):
                 length = len(val)
                 if num_rows == -1:
                     num_rows = length
-                elif length == num_rows:
-                    # we're good
-                    pass
-                else:
+                elif length != num_rows:
                     raise ValueError(f'Error, got non scalar result that mismatches length of other vector. '
                                      f'Got {length} for {col} instead of {num_rows}.')
                 columns_with_lengths[(col, num_rows)] = val

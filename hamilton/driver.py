@@ -68,12 +68,11 @@ class Driver(object):
         :param node_: node in question
         :return: True if it is required by any downstream node, false otherwise
         """
-        required = False
         for downstream_node in node_.depended_on_by:
             _, dep_type = downstream_node.input_types[node_.name]
             if dep_type == node.DependencyType.REQUIRED:
                 return True
-        return required
+        return False
 
     def validate_inputs(self, user_nodes: Collection[node.Node], inputs: typing.Optional[Dict[str, Any]] = None):
         """Validates that inputs meet our expectations. This means that:
@@ -149,7 +148,7 @@ class Driver(object):
             self.visualize_execution(final_vars, 'test-output/execute.gv', {'view': True})
             if self.has_cycles(final_vars):  # here for backwards compatible driver behavior.
                 raise ValueError('Error: cycles detected in you graph.')
-        memoized_computation = dict()  # memoized storage
+        memoized_computation = {}
         self.graph.execute(nodes, memoized_computation, overrides, inputs)
         outputs = {c: memoized_computation[c] for c in final_vars}  # only want request variables in df.
         del memoized_computation  # trying to cleanup some memory

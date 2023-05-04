@@ -18,7 +18,7 @@ def _do_not_import_me(some_input: int, some_input2: int) -> int:
 
 def B(A: int) -> int:
     """Function that should become part of the graph - B"""
-    return A * A
+    return A**2
 
 
 def C(A: int) -> int:  # empty string doc on purpose.

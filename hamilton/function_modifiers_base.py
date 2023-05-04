@@ -184,7 +184,7 @@ class NodeTransformer(SubDAGModifier):
         :param nodes: Nodes to separate out
         :return: A tuple consisting of [internal, final] node sets
         """
-        all_dependencies = set(sum([[dep for dep in node_.dependencies] for node_ in nodes], []))
+        all_dependencies = set(sum((list(node_.dependencies) for node_ in nodes), []))
         return [node_ for node_ in nodes if node_.name in all_dependencies], [node_ for node_ in nodes if node_.name not in all_dependencies]
 
     def transform_dag(self, nodes: Collection[node.Node], config: Dict[str, Any], fn: Callable) -> Collection[node.Node]:

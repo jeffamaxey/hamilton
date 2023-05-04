@@ -43,7 +43,7 @@ if __name__ == '__main__':
         'shuffle_train_test_split':  True,
     }
     # augment config
-    dag_config.update(get_model_config(_model_type))
+    dag_config |= get_model_config(_model_type)
     # get module with functions to load data
     data_module = get_data_loader(_data_set)
     # set the desired result container we want

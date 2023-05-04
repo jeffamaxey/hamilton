@@ -35,7 +35,7 @@ class parametrized(NodeExpander):
         """
         self.parameter = parameter
         self.assigned_output = assigned_output
-        for node in assigned_output.keys():
+        for node in assigned_output:
             if not isinstance(node, Tuple):
                 raise InvalidDecoratorException(
                     f'assigned_output key is incorrect: {node}. The parameterized decorator needs a dict of '
@@ -55,16 +55,20 @@ class parametrized(NodeExpander):
     def expand_node(self, node_: node.Node, config: Dict[str, Any], fn: Callable) -> Collection[node.Node]:
         """For each parameter value, loop through, partially curry the function, and output a node."""
         input_types = node_.input_types
-        nodes = []
-        for (node_name, node_doc), value in self.assigned_output.items():
-            nodes.append(
-                node.Node(
-                    node_name,
-                    node_.type,
-                    node_doc,
-                    functools.partial(node_.callable, **{self.parameter: value}),
-                    input_types={key: value for key, (value, _) in input_types.items() if key != self.parameter}))
-        return nodes
+        return [
+            node.Node(
+                node_name,
+                node_.type,
+                node_doc,
+                functools.partial(node_.callable, **{self.parameter: value}),
+                input_types={
+                    key: value
+                    for key, (value, _) in input_types.items()
+                    if key != self.parameter
+                },
+            )
+            for (node_name, node_doc), value in self.assigned_output.items()
+        ]
 
 
 class parametrized_input(NodeExpander):
@@ -152,7 +156,7 @@ class parameterized_inputs(NodeExpander):
         """
         self.parametrization = parameterization
         if not parameterization:
-            raise ValueError(f'Cannot pass empty/None dictionary to parameterized_inputs')
+            raise ValueError('Cannot pass empty/None dictionary to parameterized_inputs')
         for output, mappings in parameterization.items():
             if not mappings:
                 raise ValueError(f'Error, {output} has a none/empty dictionary mapping. Please fill it.')
@@ -335,14 +339,10 @@ class extract_fields(NodeExpander):
         output_type = inspect.signature(fn).return_annotation
         if typing_inspect.is_generic_type(output_type):
             base = typing_inspect.get_origin(output_type)
-            if base == dict or base == typing.Dict:  # different python versions return different things 3.7+ vs 3.6.
-                pass
-            else:
+            if base not in [dict, typing.Dict]:
                 raise InvalidDecoratorException(
                     f'For extracting fields, output type must be a dict or typing.Dict, not: {output_type}')
-        elif output_type == dict:
-            pass
-        else:
+        elif output_type != dict:
             raise InvalidDecoratorException(
                 f'For extracting fields, output type must be a dict or typing.Dict, not: {output_type}')
 
@@ -434,7 +434,7 @@ class does(NodeCreator):
             raise InvalidDecoratorException('Too many parameters -- for now @does can only use **kwarg functions. '
                                             f'Found params: {parameters}')
         (_, parameter), = parameters.items()
-        if not parameter.kind == inspect.Parameter.VAR_KEYWORD:
+        if parameter.kind != inspect.Parameter.VAR_KEYWORD:
             raise InvalidDecoratorException(f'Must have only one parameter, and that parameter must be a **kwargs '
                                             f'parameter. Instead, found: {parameter}')
 

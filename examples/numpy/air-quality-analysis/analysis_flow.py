@@ -46,11 +46,7 @@ def _compute_indices(breakpoints: dict, aqi: np.ndarray, pol: str, con: float) -
     """
     bp = breakpoints[pol]
 
-    if pol == 'CO':
-        inc = 0.1
-    else:
-        inc = 1
-
+    inc = 0.1 if pol == 'CO' else 1
     if bp[0] <= con < bp[1]:
         Bl = bp[0]
         Bh = bp[1] - inc

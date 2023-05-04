@@ -12,7 +12,7 @@ def A(b: int, c: int) -> int:
 
 def B(A: int, D: int) -> int:
     """Function that should become part of the graph - B"""
-    return A * A + D
+    return A**2 + D
 
 
 def C(B: int) -> int:  # empty string doc on purpose.

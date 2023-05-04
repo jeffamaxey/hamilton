@@ -291,7 +291,7 @@ def test_config_can_override():
         'new_param': 'new_value'
     }
     fg = graph.FunctionGraph(tests.resources.config_modifier, config=config)
-    out = fg.execute([n for n in fg.get_nodes()])
+    out = fg.execute(list(fg.get_nodes()))
     assert out['new_param'] == 'new_value'
 
 
@@ -401,7 +401,7 @@ def test_create_networkx_graph():
 
 def test_end_to_end_with_layered_decorators_resolves_true():
     fg = graph.FunctionGraph(tests.resources.layered_decorators, config={'foo': 'bar', 'd': 10, 'b': 20})
-    out = fg.execute([n for n in fg.get_nodes()])
+    out = fg.execute(list(fg.get_nodes()))
     assert len(out) > 0  # test config.when resolves correctly
     assert out['e'] == (20 + 10)
     assert out['f'] == (20 + 20)
@@ -410,8 +410,8 @@ def test_end_to_end_with_layered_decorators_resolves_true():
 def test_end_to_end_with_layered_decorators_resolves_false():
     config = {'foo': 'not_bar', 'd': 10, 'b': 20}
     fg = graph.FunctionGraph(tests.resources.layered_decorators, config=config)
-    out = fg.execute([n for n in fg.get_nodes()], )
-    assert {item: value for item, value in out.items() if item not in config} == {}
+    out = fg.execute(list(fg.get_nodes()))
+    assert not {item: value for item, value in out.items() if item not in config}
 
 
 def test_combine_inputs_no_collision():
@@ -439,7 +439,7 @@ def test_extract_columns_executes_once():
     Note this is a bit heavy-handed of a test but its nice to have."""
     fg = graph.FunctionGraph(tests.resources.extract_columns_execution_count, config={})
     unique_id = str(uuid.uuid4())
-    fg.execute([n for n in fg.get_nodes()], inputs={'unique_id': unique_id})
+    fg.execute(list(fg.get_nodes()), inputs={'unique_id': unique_id})
     assert len(tests.resources.extract_columns_execution_count.outputs[unique_id]) == 1  # It should only be called once
 
 

@@ -62,9 +62,11 @@ def custom_subclass_check(requested_type: Type[Type], param_type: Type[Type]):
         # the precedence is that requested will go into the param_type, so the param_type should be more permissive.
         return issubclass(requested_type, param_type)
     # classes - precedence is that requested will go into the param_type, so the param_type should be more permissive.
-    if inspect.isclass(requested_type) and inspect.isclass(param_type) and issubclass(requested_type, param_type):
-        return True
-    return False
+    return bool(
+        inspect.isclass(requested_type)
+        and inspect.isclass(param_type)
+        and issubclass(requested_type, param_type)
+    )
 
 
 def types_match(adapter: base.HamiltonGraphAdapter,
@@ -106,7 +108,7 @@ def find_functions(function_module: ModuleType) -> List[Tuple[str, Callable]]:
                 and not fn.__name__.startswith('_')
                 and is_submodule(inspect.getmodule(fn), function_module))
 
-    return [f for f in inspect.getmembers(function_module, predicate=valid_fn)]
+    return list(inspect.getmembers(function_module, predicate=valid_fn))
 
 
 def add_dependency(
@@ -147,7 +149,7 @@ def create_function_graph(*modules: ModuleType, config: Dict[str, Any], adapter:
     If it needs to be more complicated, we'll return an actual networkx graph and get all the rest of the logic for free
     """
     nodes = {}  # name -> Node
-    functions = sum([find_functions(module) for module in modules], [])
+    functions = sum((find_functions(module) for module in modules), [])
 
     # create nodes -- easier to just create this in one loop
     for func_name, f in functions:
@@ -162,7 +164,7 @@ def create_function_graph(*modules: ModuleType, config: Dict[str, Any], adapter:
     for node_name, n in list(nodes.items()):
         for param_name, (param_type, _) in n.input_types.items():
             add_dependency(n, node_name, nodes, param_name, param_type, adapter)
-    for key in config.keys():
+    for key in config:
         if key not in nodes:
             nodes[key] = node.Node(key, Any, node_source=NodeSource.EXTERNAL)
     return nodes
@@ -264,7 +266,7 @@ class FunctionGraph(object):
         :return: bool. True if cycles detected. False if not.
         """
         cycles = self.get_cycles(nodes, user_nodes)
-        return True if cycles else False
+        return bool(cycles)
 
     def get_cycles(self, nodes: Set[node.Node], user_nodes: Set[node.Node]) -> List[List[str]]:
         """Returns cycles found in the graph.
@@ -282,8 +284,7 @@ class FunctionGraph(object):
             )
             return False
         digraph = create_networkx_graph(nodes, user_nodes, 'Dependency Graph')
-        cycles = list(networkx.simple_cycles(digraph))
-        return cycles
+        return list(networkx.simple_cycles(digraph))
 
     @staticmethod
     def display(nodes: Set[node.Node],
@@ -310,7 +311,7 @@ class FunctionGraph(object):
         dot = create_graphviz_graph(nodes, user_nodes, 'Dependency Graph')
         kwargs = {'view': True}
         if kwargs and isinstance(render_kwargs, dict):
-            kwargs.update(render_kwargs)
+            kwargs |= render_kwargs
         dot.render(output_file_path, **kwargs)
 
     def get_impacted_nodes(self, var_changes: List[str]) -> Set[node.Node]:
@@ -450,10 +451,9 @@ class FunctionGraph(object):
         :return: The combined set of inputs to the DAG.
         :raises ValueError: if they are not disjoint
         """
-        duplicated_inputs = [key for key in inputs if key in config]
-        if len(duplicated_inputs) > 0:
+        if duplicated_inputs := [key for key in inputs if key in config]:
             raise ValueError(f'The following inputs are present in both config and inputs. They must be mutually disjoint. {duplicated_inputs}')
-        return {**config, **inputs}
+        return config | inputs
 
     def execute(self,
                 nodes: Collection[node.Node] = None,

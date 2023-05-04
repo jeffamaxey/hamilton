@@ -70,5 +70,4 @@ class RayGraphAdapter(base.HamiltonGraphAdapter, base.ResultMixin):
                 logger.debug(f'Got column {k}, with type [{type(v)}].')
         # need to wrap our result builder in a remote call and then pass in what we want to build from.
         remote_combine = ray.remote(self.result_builder.build_result).remote(**outputs)
-        result = ray.get(remote_combine)  # this materializes the object locally
-        return result
+        return ray.get(remote_combine)

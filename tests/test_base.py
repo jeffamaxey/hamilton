@@ -35,11 +35,15 @@ def test_numpymatrixresult_raise_length_mismatch():
 
 def test_SimplePythonGraphAdapter():
     """Tests that it delegates as intended"""
+
+
     class Foo(base.ResultMixin):
         @staticmethod
         def build_result(**outputs: typing.Dict[str, typing.Any]) -> typing.Any:
-            outputs.update({'esoteric': 'function'})
+            outputs['esoteric'] = 'function'
             return outputs
+
+
     spga = base.SimplePythonGraphAdapter(Foo())
     cols = {'a': 'b'}
     expected = {'a': 'b', 'esoteric': 'function'}
